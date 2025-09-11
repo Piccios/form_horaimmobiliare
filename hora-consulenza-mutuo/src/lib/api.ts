@@ -1,9 +1,10 @@
 export type LeadPayload = Record<string, unknown>
 
-export async function postLead(payload: LeadPayload): Promise<{ ok: boolean }> {
+// Renamed `payload` to `data` and ensured it is spread into the `enriched` object to satisfy `noUnusedParameters`.
+export async function postLead(data: LeadPayload): Promise<{ ok: boolean }> {
 	const language = navigator.language || (document.documentElement.getAttribute('lang') || '')
 	const enriched: LeadPayload = {
-		...payload,
+		...data,
 		created_at: new Date().toISOString(),
 		source_page: window.location.pathname,
 		language,
