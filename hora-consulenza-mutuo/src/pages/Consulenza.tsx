@@ -53,11 +53,11 @@ export default function Consulenza() {
     setMessage('Invio in corso…')
     try {
       const payload = Object.fromEntries(data.entries())
-      Object.assign(payload, { source: 'website', campaign: 'consulenza-mutuo', agency_code: 'HORA' })
+      Object.assign(payload, { source: 'website', utm_campaign: 'consulenza-mutuo', agency_code: 'HORA' })
       await postLead(payload)
       setMessage('Richiesta inviata. Verrai ricontattato al più presto.')
       form.reset()
-    } catch (err) {
+    } catch {
       setMessage('Invio non riuscito. Riprova.')
     } finally {
       setLoading(false)
