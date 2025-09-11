@@ -114,14 +114,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { headers, normalized } = normalizePayload(body, req)
     const csv = buildCsv(headers, normalized)
 
-    const resendApiKey = "re_CG7ijskG_6VYDuXMUMPAtirkyxTU5wX79"
+    // Read configuration from environment variables (set these in Vercel):
+    // RESEND_API_KEY, LEADS_TO_EMAIL, LEADS_BCC_EMAIL, LEADS_FROM_EMAIL
+    const resendApiKey = process.env.RESEND_API_KEY
+    const toEmail = process.env.LEADS_TO_EMAIL || 'lorenzo.picchi@euroansa.it'
+    const bccEmail = process.env.LEADS_BCC_EMAIL || 'davide.acquafresca@euroansa.it'
+    // Use a safe default sender if your domain isn't verified on Resend yet
+    const fromEmail = process.env.LEADS_FROM_EMAIL || 'Consulenza Mutuo <onboarding@resend.dev>'
 
-    const toEmail = "lorenzo.picchi@euroansa.it"
-    const bccEmail = "davide.acquafresca@euroansa.it"
-    const fromEmail = 'lorenzo.picchi@euroansa.it'
-
-    if (!resendApiKey || !toEmail) {
-      return res.status(500).json({ ok: false, error: 'Missing email configuration' })
+    if (!resendApiKey) {
+      return res.status(500).json({ ok: false, error: 'Missing RESEND_API_KEY' })
+    }
+    if (!toEmail) {
+      return res.status(500).json({ ok: false, error: 'Missing recipient email' })
     }
 
     const resend = new Resend(resendApiKey)
@@ -129,10 +134,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const filename = `lead-consulenza-${new Date().toISOString().replace(/[:.]/g, '')}.csv`
     const base64Content = Buffer.from(csv, 'utf8').toString('base64')
 
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: fromEmail,
       to: [toEmail],
       bcc: bccEmail ? [bccEmail] : undefined,
+      reply_to: typeof normalized.email_cliente === 'string' && normalized.email_cliente ? [String(normalized.email_cliente)] : undefined,
       subject: 'Nuova richiesta consulenza mutuo',
       text: 'In allegato il CSV con i dettagli della richiesta.',
       attachments: [
@@ -143,7 +149,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ],
     })
 
-    return res.status(200).json({ ok: true })
+    if (error) {
+      console.error('Resend send error', error)
+      return res.status(502).json({ ok: false, error: 'Email provider error' })
+    }
+
+    return res.status(200).json({ ok: true, id: data?.id })
   } catch (err) {
     console.error('send-lead error', err)
     return res.status(500).json({ ok: false, error: 'Internal Server Error' })
