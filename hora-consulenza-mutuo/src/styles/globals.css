@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-gold: #E7D28F;
+  --color-brand-footer: #282222;
+  --color-brand-legal: #2A2A2A;
+  --color-brand-page: #FFFFFF;
+}
+
+@layer base {
+  html: {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-brand-page text-gray-900 font-sans antialiased;
+  }
+}
+
+@layer components {
+  .container {
+    @apply max-w-6xl mx-auto px-4 sm:px-4 lg:px-8;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md bg-brand-gold text-gray-900 px-5 py-3 font-medium shadow-sm hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-gold disabled:opacity-60 disabled:cursor-not-allowed transition;
+  }
+  .sr-only-focusable {
+    @apply sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white text-gray-900 px-3 py-2 rounded;
+  }
+}
+
+
