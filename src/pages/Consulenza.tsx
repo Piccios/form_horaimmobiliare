@@ -39,6 +39,12 @@ export default function Consulenza() {
     const importoMutuo = Number(data.get('importo_mutuo') || 0)
     if (!isPositiveNumber(importoMutuo) || importoMutuo < 10000) nextErrors['importo_mutuo'] = 'Importo non valido'
 
+    // privacy consent required
+    const privacyChecked = form.querySelector<HTMLInputElement>('#privacy_consent')?.checked === true
+    if (!privacyChecked) {
+      nextErrors['privacy_consent'] = 'Devi accettare la privacy policy'
+    }
+
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length) {
       // scroll to first error
@@ -118,6 +124,16 @@ export default function Consulenza() {
               <label htmlFor="marketing" className="text-sm">Acconsento a ricevere comunicazioni di marketing secondo la privacy policy presente nel sito</label>
             </div>
           </fieldset>
+
+          <div className="flex items-start gap-2">
+            <input id="privacy_consent" name="privacy_consent" type="checkbox" className="mt-1 h-4 w-4" aria-invalid={Boolean(errors['privacy_consent'])} aria-describedby={errors['privacy_consent'] ? 'privacy-error' : undefined} />
+            <label htmlFor="privacy_consent" className="text-sm">
+              Dichiaro di aver letto e accettato l'informativa privacy del sito e acconsento al trattamento dei dati personali.
+            </label>
+          </div>
+          {errors['privacy_consent'] && (
+            <p id="privacy-error" className="text-sm text-red-600">{errors['privacy_consent']}</p>
+          )}
 
           <div className="flex items-center gap-4">
             <Button type="submit" loading={loading}>Invia richiesta (con autorizzazione al trattamento dei dati personali secondo la privacy policy del sito)</Button>

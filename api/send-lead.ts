@@ -60,6 +60,17 @@ function normalizePayload(input: Record<string, any>, req: VercelRequest) {
 
   // Convert checkbox marketing to boolean string
   const marketing = typeof input.marketing === 'string' ? 'true' : (input.marketing === true ? 'true' : 'false')
+  // Normalize privacy consent from various truthy representations ("on", "true", true, "1")
+  const privacyTruthy = ((): boolean => {
+    const v = input.privacy_consent
+    if (v === true) return true
+    if (typeof v === 'string') {
+      const lowered = v.toLowerCase().trim()
+      return lowered === 'true' || lowered === 'on' || lowered === '1' || lowered === 'yes'
+    }
+    if (typeof v === 'number') return v === 1
+    return false
+  })()
 
   const normalized: Record<string, unknown> = {
     form_id: 'consulenza-mutuo',
@@ -81,7 +92,7 @@ function normalizePayload(input: Record<string, any>, req: VercelRequest) {
     email_consulente_autorizzato: input.email_consulente_autorizzato || '',
     note: input.note || '',
     marketing,
-    privacy_consent: input.privacy_consent === true ? 'true' : 'false',
+    privacy_consent: privacyTruthy ? 'true' : 'false',
     honeypot_passed: input.honeypot_passed === true ? 'true' : 'false',
   }
 
@@ -109,6 +120,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!value || typeof value === 'object') {
         return res.status(400).json({ ok: false, error: `Campo mancante: ${field}` })
       }
+    }
+
+    // Enforce privacy consent
+    const hasPrivacyConsent = (() => {
+      const v = body.privacy_consent
+      if (v === true) return true
+      if (typeof v === 'string') {
+        const lowered = v.toLowerCase().trim()
+        return lowered === 'true' || lowered === 'on' || lowered === '1' || lowered === 'yes'
+      }
+      if (typeof v === 'number') return v === 1
+      return false
+    })()
+    if (!hasPrivacyConsent) {
+      return res.status(400).json({ ok: false, error: 'Consenso privacy obbligatorio' })
     }
 
     const { headers, normalized } = normalizePayload(body, req)
