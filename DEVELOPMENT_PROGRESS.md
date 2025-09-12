@@ -14,16 +14,17 @@
 - Completare README con istruzioni e note privacy.
 
 ### Integrazione CSV + Email (Serverless)
-- Implementata function Vercel `api/send-lead.ts` con Resend.
+- Implementata function Vercel `api/send-lead.ts` che invoca un endpoint HTTP esterno per l'invio email.
 - Generazione CSV in memoria (UTF-8 BOM; separatore `;`; CRLF).
 - Allegato CSV inviato a destinatari configurati via env.
 - Frontend: `postLead` chiama `/api/send-lead` con payload arricchito (created_at, source_page, language).
 - Modificata `Consulenza.tsx` per usare `postLead` e gestione messaggi UI.
 
 ### Variabili d'ambiente richieste (Vercel)
-- `RESEND_API_KEY`: chiave API Resend.
-- `LEAD_TO_EMAIL`: destinatario principale.
-- `LEAD_BCC_EMAIL` (opzionale): BCC per copia interna.
-Mittente fisso: `lorenzo.picchi@euroansa.it`.
+- `MAIL_ENDPOINT_URL`: URL endpoint per invio email con allegato.
+- `MAIL_API_KEY` (opzionale): token Bearer per l'endpoint.
+- `LEADS_TO_EMAIL`: destinatario principale.
+- `LEADS_BCC_EMAIL` (opzionale): BCC per copia interna.
+- `LEADS_FROM_EMAIL` (opzionale).
 
 

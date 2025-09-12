@@ -1,5 +1,24 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { Resend } from 'resend'
+// Minimal request/response interfaces to avoid external type deps here
+interface ApiRequest {
+  method?: string
+  body?: unknown
+  headers: Record<string, unknown>
+}
+
+interface ApiResponse {
+  setHeader(name: string, value: string): void
+  status(code: number): ApiResponse
+  json(payload: unknown): void
+}
+
+// Minimal Node globals to avoid pulling full @types/node in this file
+declare const process: { env: Record<string, string | undefined> }
+declare const Buffer: {
+  from(input: string, encoding: string): { toString(encoding: string): string }
+}
+
+type MailResponse = { id?: string; messageId?: string }
+// removed Resend import
 
 // CSV config
 const CSV_SEPARATOR = ';'
@@ -32,7 +51,7 @@ function buildCsv(headers: string[], row: Record<string, unknown>): string {
   return `${BOM}${csvCore}`
 }
 
-function normalizePayload(input: Record<string, any>, req: VercelRequest) {
+function normalizePayload(input: Record<string, unknown>, req: ApiRequest) {
   const nowIso = new Date().toISOString()
   const headers = [
     'form_id',
@@ -99,14 +118,14 @@ function normalizePayload(input: Record<string, any>, req: VercelRequest) {
   return { headers, normalized }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ ok: false, error: 'Method Not Allowed' })
   }
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {}
+    const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {}) as Record<string, unknown>
 
     // Basic honeypot check
     if (body.website && String(body.website).trim().length > 0) {
@@ -137,50 +156,93 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ ok: false, error: 'Consenso privacy obbligatorio' })
     }
 
-    const { headers, normalized } = normalizePayload(body, req)
+    const { headers, normalized } = normalizePayload(body as Record<string, unknown>, req)
     const csv = buildCsv(headers, normalized)
 
     // Read configuration from environment variables (set these in Vercel):
-    // RESEND_API_KEY, LEADS_TO_EMAIL, LEADS_BCC_EMAIL, LEADS_FROM_EMAIL
-    const resendApiKey = process.env.RESEND_API_KEY
+    // MAIL_ENDPOINT_URL, MAIL_API_KEY, LEADS_TO_EMAIL, LEADS_BCC_EMAIL, LEADS_FROM_EMAIL
+    // Preferisci variabile di ambiente; fallback al mail.php locale in produzione PHP
+    let mailEndpointUrl = process.env.MAIL_ENDPOINT_URL
+    const mailApiKey = process.env.MAIL_API_KEY
     const toEmail = process.env.LEADS_TO_EMAIL || 'lorenzo.picchi@euroansa.it'
     const bccEmail = process.env.LEADS_BCC_EMAIL || 'davide.acquafresca@euroansa.it'
-    // Use a safe default sender if your domain isn't verified on Resend yet
-    const fromEmail = process.env.LEADS_FROM_EMAIL || 'Consulenza Mutuo <onboarding@resend.dev>'
+    const fromEmail = process.env.LEADS_FROM_EMAIL || 'Consulenza Mutuo <noreply@horaimmobiliare.it>'
 
-    if (!resendApiKey) {
-      return res.status(500).json({ ok: false, error: 'Missing RESEND_API_KEY' })
+    if (!mailEndpointUrl) {
+      // Fallback locale. Tenta vari percorsi noti
+      const origins = [
+        '/mail.php',
+        '/form_horaimmobiliare/mail.php',
+      ]
+      // Scegli il primo; il client (edge) dovrà risolvere pieno URL lato frontend se necessario
+      mailEndpointUrl = origins[0]
     }
     if (!toEmail) {
       return res.status(500).json({ ok: false, error: 'Missing recipient email' })
     }
 
-    const resend = new Resend(resendApiKey)
-
     const filename = `lead-consulenza-${new Date().toISOString().replace(/[:.]/g, '')}.csv`
     const base64Content = Buffer.from(csv, 'utf8').toString('base64')
 
-    const { data, error } = await resend.emails.send({
-      from: fromEmail,
-      to: [toEmail],
-      bcc: bccEmail ? [bccEmail] : undefined,
-      reply_to: typeof normalized.email_cliente === 'string' && normalized.email_cliente ? [String(normalized.email_cliente)] : undefined,
-      subject: 'Nuova richiesta consulenza mutuo',
-      text: 'In allegato il CSV con i dettagli della richiesta.',
-      attachments: [
-        {
-          filename,
-          content: base64Content,
-        },
-      ],
+    const replyTo = typeof normalized.email_cliente === 'string' && normalized.email_cliente ? String(normalized.email_cliente) : undefined
+
+    // Due payload diversi: provider JSON generico vs mail.php locale
+    const isLocalPhp = /mail\.php$/i.test(mailEndpointUrl)
+    const payload = isLocalPhp
+      ? {
+          to: toEmail,
+          // mail.php supporta bcc singolo opzionale
+          bcc: bccEmail || undefined,
+          replyTo,
+          subject: 'Nuova richiesta consulenza mutuo',
+          message: 'In allegato il CSV con i dettagli della richiesta.',
+          attachments: [
+            {
+              filename,
+              content: base64Content,
+              contentType: 'text/csv; charset=utf-8',
+            },
+          ],
+        }
+      : {
+          from: fromEmail,
+          to: [toEmail],
+          bcc: bccEmail ? [bccEmail] : undefined,
+          replyTo,
+          subject: 'Nuova richiesta consulenza mutuo',
+          text: 'In allegato il CSV con i dettagli della richiesta.',
+          attachments: [
+            {
+              filename,
+              content: base64Content,
+              contentType: 'text/csv; charset=utf-8',
+            },
+          ],
+        }
+
+    const resp = await fetch(mailEndpointUrl, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(mailApiKey ? { authorization: `Bearer ${mailApiKey}` } : {}),
+      },
+      body: JSON.stringify(payload),
     })
 
-    if (error) {
-      console.error('Resend send error', error)
+    let json: unknown = null
+    try {
+      json = await resp.json()
+    } catch {
+      // ignore JSON parse errors; may return empty body
+    }
+
+    if (!resp.ok) {
+      console.error('Mail endpoint error', { status: resp.status, body: json })
       return res.status(502).json({ ok: false, error: 'Email provider error' })
     }
 
-    return res.status(200).json({ ok: true, id: data?.id })
+    const responseJson = (json ?? {}) as MailResponse
+    return res.status(200).json({ ok: true, id: responseJson.id ?? responseJson.messageId ?? undefined })
   } catch (err) {
     console.error('send-lead error', err)
     return res.status(500).json({ ok: false, error: 'Internal Server Error' })

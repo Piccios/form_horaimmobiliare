@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="bg-brand-footer text-gray-200">
         <div className="container py-10 text-center">
           <p className="text-sm sm:text-base leading-relaxed opacity-90">
-            Euroansa e Italiana Immobiliare sono due aziende distinte non obbligate tra loro.
+            Euroansa e Hora Immobiliare sono due aziende distinte non obbligate tra loro.
             Operano, non in esclusiva reciproca, con la sola finalità di un supporto comune al cliente.
           </p>
         </div>
@@ -23,7 +23,7 @@ export default function Footer() {
           <div>
             <span className="opacity-90">Assistenza: </span>
             <a className="underline text-brand-gold hover:opacity-90" href="mailto:help@italianaimmobiliare.it">
-              help@italianaimmobiliare.it
+            info@horaimmobiliare.it
             </a>
           </div>
         </div>

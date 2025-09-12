@@ -1,15 +1,15 @@
 ## Invio CSV via email (Serverless)
 
-Ogni invio del form genera un CSV e lo spedisce via email tramite una Vercel Function (`api/send-lead.ts`) utilizzando Resend.
+Ogni invio del form genera un CSV e lo spedisce via email tramite una Vercel Function (`api/send-lead.ts`) che chiama un endpoint esterno di invio mail via HTTP.
 
 ### Setup
-1. Installare dipendenze:
-   - `npm install resend @vercel/node`
-2. Configurare variabili d'ambiente su Vercel (Project Settings → Environment Variables):
-   - `RESEND_API_KEY`: chiave API Resend
-   - `LEAD_TO_EMAIL`: destinatario principale
-   - `LEAD_BCC_EMAIL` (opzionale): BCC
-3. Deploy su Vercel. Il mittente è `lorenzo.picchi@euroansa.it`.
+1. Configurare variabili d'ambiente su Vercel (Project Settings → Environment Variables):
+   - `MAIL_ENDPOINT_URL`: URL dell'endpoint HTTP che invia l'email con allegato
+   - `MAIL_API_KEY` (opzionale): Bearer token per autenticare la chiamata
+   - `LEADS_TO_EMAIL`: destinatario principale
+   - `LEADS_BCC_EMAIL` (opzionale): BCC
+   - `LEADS_FROM_EMAIL` (opzionale): mittente, default `Consulenza Mutuo <noreply@horaimmobiliare.it>`
+2. Deploy su Vercel.
 
 ### Struttura CSV
 - UTF-8 con BOM, separatore `;`, CRLF, valori sempre tra virgolette.
