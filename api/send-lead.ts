@@ -161,21 +161,14 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     // Read configuration from environment variables (set these in Vercel):
     // MAIL_ENDPOINT_URL, MAIL_API_KEY, LEADS_TO_EMAIL, LEADS_BCC_EMAIL, LEADS_FROM_EMAIL
-    // Preferisci variabile di ambiente; fallback al mail.php locale in produzione PHP
-    let mailEndpointUrl = process.env.MAIL_ENDPOINT_URL
+    const mailEndpointUrl = process.env.MAIL_ENDPOINT_URL
     const mailApiKey = process.env.MAIL_API_KEY
     const toEmail = process.env.LEADS_TO_EMAIL || 'lorenzo.picchi@euroansa.it'
     const bccEmail = process.env.LEADS_BCC_EMAIL || 'davide.acquafresca@euroansa.it'
     const fromEmail = process.env.LEADS_FROM_EMAIL || 'Consulenza Mutuo <noreply@horaimmobiliare.it>'
 
     if (!mailEndpointUrl) {
-      // Fallback locale. Tenta vari percorsi noti
-      const origins = [
-        '/mail.php',
-        '/form_horaimmobiliare/mail.php',
-      ]
-      // Scegli il primo; il client (edge) dovrà risolvere pieno URL lato frontend se necessario
-      mailEndpointUrl = origins[0]
+      return res.status(500).json({ ok: false, error: 'Missing MAIL_ENDPOINT_URL' })
     }
     if (!toEmail) {
       return res.status(500).json({ ok: false, error: 'Missing recipient email' })
@@ -185,40 +178,21 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const base64Content = Buffer.from(csv, 'utf8').toString('base64')
 
     const replyTo = typeof normalized.email_cliente === 'string' && normalized.email_cliente ? String(normalized.email_cliente) : undefined
-
-    // Due payload diversi: provider JSON generico vs mail.php locale
-    const isLocalPhp = /mail\.php$/i.test(mailEndpointUrl)
-    const payload = isLocalPhp
-      ? {
-          to: toEmail,
-          // mail.php supporta bcc singolo opzionale
-          bcc: bccEmail || undefined,
-          replyTo,
-          subject: 'Nuova richiesta consulenza mutuo',
-          message: 'In allegato il CSV con i dettagli della richiesta.',
-          attachments: [
-            {
-              filename,
-              content: base64Content,
-              contentType: 'text/csv; charset=utf-8',
-            },
-          ],
-        }
-      : {
-          from: fromEmail,
-          to: [toEmail],
-          bcc: bccEmail ? [bccEmail] : undefined,
-          replyTo,
-          subject: 'Nuova richiesta consulenza mutuo',
-          text: 'In allegato il CSV con i dettagli della richiesta.',
-          attachments: [
-            {
-              filename,
-              content: base64Content,
-              contentType: 'text/csv; charset=utf-8',
-            },
-          ],
-        }
+    const payload = {
+      from: fromEmail,
+      to: [toEmail],
+      bcc: bccEmail ? [bccEmail] : undefined,
+      replyTo,
+      subject: 'Nuova richiesta consulenza mutuo',
+      text: 'In allegato il CSV con i dettagli della richiesta.',
+      attachments: [
+        {
+          filename,
+          content: base64Content,
+          contentType: 'text/csv; charset=utf-8',
+        },
+      ],
+    }
 
     const resp = await fetch(mailEndpointUrl, {
       method: 'POST',

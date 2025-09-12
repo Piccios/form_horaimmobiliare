@@ -1,48 +1,32 @@
 <?php
 // mail.php
 
-// Disabilita la visualizzazione degli errori in produzione (puoi alzare in dev)
+// Disabilita la visualizzazione degli errori in produzione
 ini_set('display_errors', 0);
 error_reporting(0);
 
 // Imposta header per JSON
 header('Content-Type: application/json; charset=utf-8');
 
-// Definisci le costanti per il footer (ADATTARE AL PROGETTO CORRENTE)
-define('OWNER_TITOLARE', 'Hora Immobiliare');
-define('OWNER_IND', '—');
-define('OWNER_WEB', '<a href="https://horaimmobiliare.it/">www.horaimmobiliare.it</a>');
-define('MAIL_ENDPOINT_URL', 'https://form-horaimmobiliare.vercel.app/mail.php');
-define('LEADS_TO_EMAIL', 'lorenzo.picchi@euroansa.it');
-define('LEADS_BCC_EMAIL', 'davide.acquafresca@euroansa.it');
-
+// Definisci le costanti per il footer
+define('OWNER_TITOLARE', 'Registro API');
+define('OWNER_IND', 'Via Carlo Pisacane, 36 20129 Milano ');
+define('OWNER_WEB', '<a href="https://www.registroapi.it">www.registroapi.it</a>');
 
 // Funzione per inviare l'email
-function fn_sendemail($to, $subject, $message, $attachments = [], $options = [])
+function fn_sendemail($to, $subject, $message)
 {
     // Verifica se la funzione mail() è disponibile
     if (!function_exists('mail')) {
         return false;
     }
 
-    // Mittente di default (ADATTARE AL PROGETTO CORRENTE)
-    $from = "Consulenza Mutuo <noreply@horaimmobiliare.it>";
-
-    $replyTo = isset($options['replyTo']) && filter_var($options['replyTo'], FILTER_VALIDATE_EMAIL) ? $options['replyTo'] : $from;
-    $bcc = isset($options['bcc']) && filter_var($options['bcc'], FILTER_VALIDATE_EMAIL) ? $options['bcc'] : '';
+    $from = "noreply@registroapi.it";
 
     $headers = "From: " . $from . "\r\n";
-    $headers .= "Reply-To: " . $replyTo . "\r\n";
-    if (!empty($bcc)) {
-        $headers .= "Bcc: " . $bcc . "\r\n";
-    }
+    $headers .= "Reply-To: " . $from . "\r\n";
     $headers .= "MIME-Version: 1.0\r\n";
-    $boundary = md5(uniqid(time()));
-    if (!empty($attachments)) {
-        $headers .= "Content-Type: multipart/mixed; boundary=\"$boundary\"\r\n";
-    } else {
-        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-    }
+    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
 
     $footer = "<p style='margin-top:100px;'>
         ----------------------------------------<br />" .
@@ -64,39 +48,11 @@ function fn_sendemail($to, $subject, $message, $attachments = [], $options = [])
         $formatted_message
     );
 
-    $htmlBody = "<html><body>" . $formatted_message . $footer . "</body></html>";
-
-    if (!empty($attachments)) {
-        // Costruisci multipart/mixed
-        $body  = "--$boundary\r\n";
-        $body .= "Content-Type: text/html; charset=UTF-8\r\n\r\n";
-        $body .= $htmlBody . "\r\n";
-
-        foreach ($attachments as $att) {
-            $filename = isset($att['filename']) ? $att['filename'] : 'allegato.dat';
-            $contentType = isset($att['contentType']) ? $att['contentType'] : 'application/octet-stream';
-            $contentBase64 = isset($att['content']) ? $att['content'] : '';
-
-            // Se content non è base64, prova a codificarlo
-            if (strpos($contentBase64, '\n') === false && base64_decode($contentBase64, true) === false) {
-                $contentBase64 = base64_encode($contentBase64);
-            }
-
-            $body .= "--$boundary\r\n";
-            $body .= "Content-Type: $contentType; name=\"$filename\"\r\n";
-            $body .= "Content-Transfer-Encoding: base64\r\n";
-            $body .= "Content-Disposition: attachment; filename=\"$filename\"\r\n\r\n";
-            $body .= chunk_split($contentBase64) . "\r\n";
-        }
-
-        $body .= "--$boundary--";
-    } else {
-        $body = $htmlBody;
-    }
+    $message = "<html><body>" . $formatted_message . $footer . "</body></html>";
 
     try {
         // Prova a inviare l'email
-        $result = @mail($to, $subject, $body, $headers);
+        $result = @mail($to, $subject, $message, $headers);
 
         if ($result) {
             return true;
@@ -109,55 +65,16 @@ function fn_sendemail($to, $subject, $message, $attachments = [], $options = [])
     }
 }
 
-// Controllo chiamata (POST)
+// Controllo chiamata AJAX (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        // Supporta sia application/json sia form-url-encoded/multipart
-        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-        $rawInput = file_get_contents('php://input');
-        $data = [];
-
-        if (stripos($contentType, 'application/json') !== false) {
-            $data = json_decode($rawInput, true) ?: [];
-        } else {
-            $data = $_POST;
-        }
-
-        // Pulizia dati
-        $to = filter_var($data['to'] ?? '', FILTER_VALIDATE_EMAIL);
-        $subject = trim($data['subject'] ?? '');
-        $message = trim($data['message'] ?? '');
-
-        // Allegati opzionali: [{ filename, content, contentType }]
-        $attachments = [];
-        if (isset($data['attachments']) && is_array($data['attachments'])) {
-            foreach ($data['attachments'] as $att) {
-                if (!is_array($att)) continue;
-                $attachments[] = [
-                    'filename' => isset($att['filename']) ? $att['filename'] : 'allegato.dat',
-                    'content' => isset($att['content']) ? $att['content'] : '',
-                    'contentType' => isset($att['contentType']) ? $att['contentType'] : 'application/octet-stream',
-                ];
-            }
-        }
+        // Sicurezza minima: pulizia dei dati
+        $to = filter_var($_POST['to'] ?? '', FILTER_VALIDATE_EMAIL);
+        $subject = trim($_POST['subject'] ?? '');
+        $message = trim($_POST['message'] ?? '');
 
         if ($to && $subject && $message) {
-            $options = [];
-            if (!empty($data['replyTo'])) {
-                $options['replyTo'] = $data['replyTo'];
-            }
-            if (!empty($data['bcc'])) {
-                // accetta stringa o array e usa il primo valore valido
-                if (is_array($data['bcc'])) {
-                    foreach ($data['bcc'] as $addr) {
-                        if (filter_var($addr, FILTER_VALIDATE_EMAIL)) { $options['bcc'] = $addr; break; }
-                    }
-                } else if (is_string($data['bcc']) && filter_var($data['bcc'], FILTER_VALIDATE_EMAIL)) {
-                    $options['bcc'] = $data['bcc'];
-                }
-            }
-
-            $success = fn_sendemail($to, $subject, $message, $attachments, $options);
+            $success = fn_sendemail($to, $subject, $message);
 
             if ($success) {
                 echo json_encode(['success' => true, 'message' => 'Email inviata con successo']);
