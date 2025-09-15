@@ -10,7 +10,7 @@ export async function postLead(data: LeadPayload): Promise<{ ok: boolean }> {
 		language,
 		honeypot_passed: true,
 	}
-	const res = await fetch('/api/send-lead', {
+	const res = await fetch('/api/send-to-sheet.php', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(enriched),

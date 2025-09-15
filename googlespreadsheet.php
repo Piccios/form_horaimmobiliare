@@ -54,6 +54,22 @@ function addRowToSpreadsheet($fileId, $ary_values = array()) {
     $client->addScope(Google_Service_Sheets::SPREADSHEETS);
     $sheet_service = new Google_Service_Sheets($client);
 
+    // Discover first sheetId dynamically (instead of assuming 0)
+    try {
+        $spreadsheet = $sheet_service->spreadsheets->get($fileId);
+        $sheets = $spreadsheet->getSheets();
+        $firstSheetId = 0;
+        if (is_array($sheets) && count($sheets) > 0) {
+            $props = $sheets[0]->getProperties();
+            if ($props && $props->getSheetId() !== null) {
+                $firstSheetId = $props->getSheetId();
+            }
+        }
+    } catch (Exception $e) {
+        debug_log('Impossibile ottenere i metadati del foglio: ' . $e->getMessage());
+        $firstSheetId = 0; // fallback
+    }
+
     $values = array();
     foreach( $ary_values AS $d ) {
         $cellData = new Google_Service_Sheets_CellData();
@@ -75,7 +91,7 @@ function addRowToSpreadsheet($fileId, $ary_values = array()) {
 
     // Prepare the request
     $append_request = new Google_Service_Sheets_AppendCellsRequest();
-    $append_request->setSheetId(0);
+    $append_request->setSheetId($firstSheetId);
     $append_request->setRows($rowData);
     $append_request->setFields('userEnteredValue');
     

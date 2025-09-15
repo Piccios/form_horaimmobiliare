@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+# google service credentials
+spreedsheet-per-form-envoe.json
+storage/*.json
+storage/google-service-account.json
