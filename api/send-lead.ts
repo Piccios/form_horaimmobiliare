@@ -114,34 +114,30 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
       return false
     }
     
-    // Convert data to array format for Google Sheets
+    // Map data to Google Sheet columns in the correct order
+    // Data | Email cliente | Nome cliente | Telefono cliente | Importo mutuo | Valore immobile | Preferenza contatto | Consulente Euroansa | Email consulente Euroansa | Consulente esterno | NOTE | Email consulente esterno | Consenso marketing | Status | MASSIMO FINANZIABILE | NOTE EUROANSA
     const values = [
-      data.form_id,
-      data.created_at,
-      data.source_page,
-      data.utm_source,
-      data.utm_medium,
-      data.utm_campaign,
-      data.language,
-      data.user_agent,
-      data.email_cliente,
-      data.nome_cognome_cliente,
-      data.cellulare_cliente,
-      data.importo_mutuo,
-      data.valore_immobile,
-      data.preferenza_contatto,
-      data.consulente_euroansa,
-      data.nome_cognome_consulente_autorizzato,
-      data.email_consulente_autorizzato,
-      data.note,
-      data.marketing,
-      data.privacy_consent,
-      data.honeypot_passed
+      data.created_at || '', // Data
+      data.email_cliente || '', // Email cliente
+      data.nome_cognome_cliente || '', // Nome cliente
+      data.cellulare_cliente || '', // Telefono cliente
+      data.importo_mutuo || '', // Importo mutuo
+      data.valore_immobile || '', // Valore immobile
+      data.preferenza_contatto || '', // Preferenza contatto
+      data.consulente_euroansa || '', // Consulente Euroansa
+      data.email_consulente_autorizzato || '', // Email consulente Euroansa
+      data.nome_cognome_consulente_autorizzato || '', // Consulente esterno
+      data.note || '', // NOTE
+      '', // Email consulente esterno (non presente nel form)
+      data.marketing === 'true' ? 'Sì' : 'No', // Consenso marketing
+      'Nuovo', // Status (valore fisso)
+      '', // MASSIMO FINANZIABILE (non presente nel form)
+      '' // NOTE EUROANSA (non presente nel form)
     ]
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Sheet1!A:U', // Adjust range as needed
+      range: 'Sheet1!A:P', // 16 colonne (A-P)
       valueInputOption: 'RAW',
       requestBody: {
         values: [values]
