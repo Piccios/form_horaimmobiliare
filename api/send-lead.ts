@@ -1,3 +1,7 @@
+import { google } from 'googleapis'
+import { readFileSync } from 'fs'
+import { join } from 'path'
+
 // Minimal request/response interfaces to avoid external type deps here
 interface ApiRequest {
   method?: string
@@ -13,43 +17,8 @@ interface ApiResponse {
 
 // Minimal Node globals to avoid pulling full @types/node in this file
 declare const process: { env: Record<string, string | undefined> }
-declare const Buffer: {
-  from(input: string, encoding: string): { toString(encoding: string): string }
-}
+declare const __dirname: string
 
-type MailResponse = { id?: string; messageId?: string }
-// removed Resend import
-
-// CSV config
-const CSV_SEPARATOR = ';'
-const NEWLINE = '\r\n'
-
-function sanitizeValue(value: unknown): string {
-  if (value === null || value === undefined) return ''
-  let str = String(value)
-  // Replace newlines to keep one-line per record
-  str = str.replace(/[\r\n]+/g, ' ').trim()
-  return str
-}
-
-function quoteCsv(value: string): string {
-  // Always quote to be safe with Excel
-  const escaped = value.replace(/"/g, '""')
-  return `"${escaped}"`
-}
-
-function buildCsv(headers: string[], row: Record<string, unknown>): string {
-  const headerLine = headers.map(h => quoteCsv(h)).join(CSV_SEPARATOR)
-  const values = headers.map((h) => {
-    const v = sanitizeValue(row[h])
-    return quoteCsv(v)
-  }).join(CSV_SEPARATOR)
-
-  const csvCore = `${headerLine}${NEWLINE}${values}${NEWLINE}`
-  // Prepend UTF-8 BOM for Excel compatibility on Windows
-  const BOM = '\uFEFF'
-  return `${BOM}${csvCore}`
-}
 
 function normalizePayload(input: Record<string, unknown>, req: ApiRequest) {
   const nowIso = new Date().toISOString()
@@ -118,6 +87,75 @@ function normalizePayload(input: Record<string, unknown>, req: ApiRequest) {
   return { headers, normalized }
 }
 
+async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boolean> {
+  try {
+    // Read credentials from the JSON file
+    let credentials
+    try {
+      const credentialsPath = join(__dirname, '..', 'storage', 'google-service-account.json')
+      const credentialsFile = readFileSync(credentialsPath, 'utf8')
+      credentials = JSON.parse(credentialsFile)
+    } catch (error) {
+      console.error('Error reading credentials file:', error)
+      return false
+    }
+
+    const auth = new google.auth.GoogleAuth({
+      credentials: credentials,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    })
+
+    const sheets = google.sheets({ version: 'v4', auth })
+    
+    // Get Google Sheet ID from environment
+    const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID
+    if (!SPREADSHEET_ID) {
+      console.error('GOOGLE_SHEET_ID environment variable not set')
+      return false
+    }
+    
+    // Convert data to array format for Google Sheets
+    const values = [
+      data.form_id,
+      data.created_at,
+      data.source_page,
+      data.utm_source,
+      data.utm_medium,
+      data.utm_campaign,
+      data.language,
+      data.user_agent,
+      data.email_cliente,
+      data.nome_cognome_cliente,
+      data.cellulare_cliente,
+      data.importo_mutuo,
+      data.valore_immobile,
+      data.preferenza_contatto,
+      data.consulente_euroansa,
+      data.nome_cognome_consulente_autorizzato,
+      data.email_consulente_autorizzato,
+      data.note,
+      data.marketing,
+      data.privacy_consent,
+      data.honeypot_passed
+    ]
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Sheet1!A:U', // Adjust range as needed
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [values]
+      }
+    })
+
+    console.log('Row added to Google Sheet successfully')
+    return true
+  } catch (error) {
+    console.error('Error adding row to Google Sheet:', error)
+    return false
+  }
+}
+
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -156,11 +194,15 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       return res.status(400).json({ ok: false, error: 'Consenso privacy obbligatorio' })
     }
 
-    const { headers, normalized } = normalizePayload(body as Record<string, unknown>, req)
-    const csv = buildCsv(headers, normalized)
+    const { normalized } = normalizePayload(body as Record<string, unknown>, req)
 
-    // Email sending disabled by request
-    // TODO: integrate Google Sheets append here using `csv` or `normalized`
+    // Append to Google Sheet
+    const sheetSuccess = await appendToGoogleSheet(normalized)
+    if (!sheetSuccess) {
+      console.error('Failed to append to Google Sheet')
+      // Still return success to user, but log the error
+    }
+
     return res.status(200).json({ ok: true })
   } catch (err) {
     console.error('send-lead error', err)
