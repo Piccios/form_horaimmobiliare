@@ -161,8 +161,8 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
       }
     }
 
-    // Map data to Google Sheet columns in the correct order
-    // Data | Email cliente | Nome cliente | Telefono cliente | Importo mutuo | Valore immobile | Preferenza contatto | Consulente Euroansa | Email consulente Euroansa | Consulente esterno | NOTE | Email consulente esterno | Consenso marketing | Status | MASSIMO FINANZIABILE | NOTE EUROANSA
+    // Map data to Google Sheet columns in the correct order (15 columns)
+    // Data | Email cliente | Nome cliente | Telefono cliente | Importo mutuo | Valore immobile | Preferenza contatto | Consulente Euroansa | Email consulente Hora | Consulente Hora | NOTE | Consenso marketing | Status | MASSIMO FINANZIABILE | NOTE EUROANSA
     const values = [
       data.created_at || '', // Data
       data.email_cliente || '', // Email cliente
@@ -172,10 +172,9 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
       data.valore_immobile || '', // Valore immobile
       data.preferenza_contatto || '', // Preferenza contatto
       data.consulente_euroansa || '', // Consulente Euroansa
-      data.email_consulente_autorizzato || '', // Email consulente Euroansa
-      data.nome_cognome_consulente_autorizzato || '', // Consulente esterno
+      data.email_consulente_autorizzato || '', // Email consulente Hora
+      data.nome_cognome_consulente_autorizzato || '', // Consulente Hora
       data.note || '', // NOTE
-      '', // Email consulente esterno (non presente nel form)
       data.marketing === 'true' ? 'Sì' : 'No', // Consenso marketing
       'Nuovo', // Status (valore fisso)
       '', // MASSIMO FINANZIABILE (non presente nel form)
@@ -185,7 +184,7 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
     console.log(' Values prepared for Google Sheet:', JSON.stringify(values, null, 2))
     // Quote sheet title to support spaces/apostrophes per A1 notation
     const escapedTitle = String(targetSheetTitle).replace(/'/g, "''")
-    const targetRange = `'${escapedTitle}'!A:P`
+    const targetRange = `'${escapedTitle}'!A:O`
     console.log(' Target range:', targetRange)
     console.log(' Spreadsheet ID:', SPREADSHEET_ID)
 

@@ -59,10 +59,10 @@ if (!$hasPrivacy) {
     exit;
 }
 
-// Column order (Option A) as provided by you:
+// Column order (final, 15 columns):
 // Data, Email cliente, Nome cliente, Telefono cliente, Importo mutuo, Valore immobile,
-// Preferenza contatto, Consulente Euroansa, Email consulente Euroansa, Consulente esterno,
-// NOTE, Email consulente esterno, Consenso marketing, Status, MASSIMO FINANZIABILE, NOTE EUROANSA
+// Preferenza contatto, Consulente Euroansa, Email consulente Hora, Consulente Hora,
+// NOTE, Consenso marketing, Status, MASSIMO FINANZIABILE, NOTE EUROANSA
 
 $created_at = isset($data['created_at']) ? $data['created_at'] : date('c');
 
@@ -82,10 +82,9 @@ $values = [
     isset($data['valore_immobile']) ? $data['valore_immobile'] : '',
     isset($data['preferenza_contatto']) ? $data['preferenza_contatto'] : '',
     isset($data['consulente_euroansa']) ? $data['consulente_euroansa'] : '',
-    isset($data['email_consulente_euroansa']) ? $data['email_consulente_euroansa'] : '',
-    isset($data['nome_cognome_consulente_autorizzato']) ? $data['nome_cognome_consulente_autorizzato'] : '',
+    isset($data['email_consulente_autorizzato']) ? $data['email_consulente_autorizzato'] : '', // Email consulente Hora
+    isset($data['nome_cognome_consulente_autorizzato']) ? $data['nome_cognome_consulente_autorizzato'] : '', // Consulente Hora
     isset($data['note']) ? $data['note'] : '',
-    isset($data['email_consulente_autorizzato']) ? $data['email_consulente_autorizzato'] : '',
     $marketing,
     '', // Status (not provided by form)
     '', // MASSIMO FINANZIABILE (not provided by form)
