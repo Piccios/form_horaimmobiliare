@@ -163,7 +163,9 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
     ]
 
     console.log('📝 Values prepared for Google Sheet:', JSON.stringify(values, null, 2))
-    const targetRange = `${targetSheetTitle}!A:P`
+    // Quote sheet title to support spaces/apostrophes per A1 notation
+    const escapedTitle = String(targetSheetTitle).replace(/'/g, "''")
+    const targetRange = `'${escapedTitle}'!A:P`
     console.log('🎯 Target range:', targetRange)
     console.log('📊 Spreadsheet ID:', SPREADSHEET_ID)
 
