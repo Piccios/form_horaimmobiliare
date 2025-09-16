@@ -1,5 +1,5 @@
 import { google } from 'googleapis'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 
 // Minimal request/response interfaces to avoid external type deps here
@@ -89,14 +89,25 @@ function normalizePayload(input: Record<string, unknown>, req: ApiRequest) {
 
 async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boolean> {
   try {
+    console.log('🔍 Starting Google Sheets append process...')
+    console.log('📊 Data to append:', JSON.stringify(data, null, 2))
+    
     // Read credentials from the JSON file
     let credentials
     try {
       const credentialsPath = join(__dirname, '..', 'storage', 'google-service-account.json')
+      console.log('📁 Looking for credentials at:', credentialsPath)
+      console.log('📁 File exists?', existsSync(credentialsPath))
+      console.log('📁 __dirname is:', __dirname)
+      
       const credentialsFile = readFileSync(credentialsPath, 'utf8')
       credentials = JSON.parse(credentialsFile)
+      console.log('✅ Credentials loaded successfully')
+      console.log('🔑 Service account email:', credentials.client_email)
     } catch (error) {
-      console.error('Error reading credentials file:', error)
+      console.error('❌ Error reading credentials file:', error)
+      console.error('❌ Credentials path attempted:', join(__dirname, '..', 'storage', 'google-service-account.json'))
+      console.error('❌ File exists check:', existsSync(join(__dirname, '..', 'storage', 'google-service-account.json')))
       return false
     }
 
@@ -104,13 +115,16 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
       credentials: credentials,
       scopes: ['https://www.googleapis.com/auth/spreadsheets']
     })
+    console.log('🔐 Google Auth initialized')
 
     const sheets = google.sheets({ version: 'v4', auth })
+    console.log('📋 Google Sheets API initialized')
     
     // Get Google Sheet ID from environment
     const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID
+    console.log('🆔 Google Sheet ID from env:', SPREADSHEET_ID)
     if (!SPREADSHEET_ID) {
-      console.error('GOOGLE_SHEET_ID environment variable not set')
+      console.error('❌ GOOGLE_SHEET_ID environment variable not set')
       return false
     }
     
@@ -135,7 +149,11 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
       '' // NOTE EUROANSA (non presente nel form)
     ]
 
-    await sheets.spreadsheets.values.append({
+    console.log('📝 Values prepared for Google Sheet:', JSON.stringify(values, null, 2))
+    console.log('🎯 Target range: Sheet1!A:P')
+    console.log('📊 Spreadsheet ID:', SPREADSHEET_ID)
+
+    const appendResult = await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: 'Sheet1!A:P', // 16 colonne (A-P)
       valueInputOption: 'RAW',
@@ -144,10 +162,16 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
       }
     })
 
-    console.log('Row added to Google Sheet successfully')
+    console.log('✅ Row added to Google Sheet successfully')
+    console.log('📈 Append result:', JSON.stringify(appendResult.data, null, 2))
     return true
   } catch (error) {
-    console.error('Error adding row to Google Sheet:', error)
+    console.error('❌ Error adding row to Google Sheet:', error)
+    console.error('❌ Error details:', JSON.stringify(error, null, 2))
+    if (error instanceof Error) {
+      console.error('❌ Error message:', error.message)
+      console.error('❌ Error stack:', error.stack)
+    }
     return false
   }
 }
@@ -193,10 +217,13 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const { normalized } = normalizePayload(body as Record<string, unknown>, req)
 
     // Append to Google Sheet
+    console.log('🚀 Starting Google Sheets append process...')
     const sheetSuccess = await appendToGoogleSheet(normalized)
     if (!sheetSuccess) {
-      console.error('Failed to append to Google Sheet')
+      console.error('❌ Failed to append to Google Sheet - but continuing with success response')
       // Still return success to user, but log the error
+    } else {
+      console.log('✅ Google Sheets append completed successfully')
     }
 
     return res.status(200).json({ ok: true })
