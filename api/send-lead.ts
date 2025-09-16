@@ -119,7 +119,7 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
     const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID
     console.log('🆔 Google Sheet ID from env:', SPREADSHEET_ID)
     if (!SPREADSHEET_ID) {
-      console.error('❌ GOOGLE_SHEET_ID environment variable not set')
+      console.error(' GOOGLE_SHEET_ID environment variable not set')
       return false
     }
     
