@@ -1,4 +1,11 @@
 {
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/" }
+  ]
+}
+
+{
   "env": {
     "GOOGLE_SHEET_ID": "1dyf5kSwS8k2CpDmWI_PkCT_T0cXvyhjljBP36CpQoWc"
   }
