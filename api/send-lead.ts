@@ -1,6 +1,7 @@
 import { google } from 'googleapis'
 import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
 
 // Minimal request/response interfaces to avoid external type deps here
 interface ApiRequest {
@@ -17,7 +18,6 @@ interface ApiResponse {
 
 // Minimal Node globals to avoid pulling full @types/node in this file
 declare const process: { env: Record<string, string | undefined> }
-declare const __dirname: string
 
 
 function normalizePayload(input: Record<string, unknown>, req: ApiRequest) {
@@ -92,22 +92,36 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
     console.log('🔍 Starting Google Sheets append process...')
     console.log('📊 Data to append:', JSON.stringify(data, null, 2))
     
-    // Read credentials from the JSON file
+    // Get __dirname equivalent for ES modules
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = dirname(__filename)
+    
+    // Read credentials from environment variable or file
     let credentials
     try {
-      const credentialsPath = join(__dirname, '..', 'storage', 'google-service-account.json')
-      console.log('📁 Looking for credentials at:', credentialsPath)
-      console.log('📁 File exists?', existsSync(credentialsPath))
-      console.log('📁 __dirname is:', __dirname)
-      
-      const credentialsFile = readFileSync(credentialsPath, 'utf8')
-      credentials = JSON.parse(credentialsFile)
-      console.log('✅ Credentials loaded successfully')
-      console.log('🔑 Service account email:', credentials.client_email)
+      // First try environment variable (for Vercel)
+      const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+      if (credentialsJson) {
+        console.log('🔑 Loading credentials from environment variable')
+        credentials = JSON.parse(credentialsJson)
+        console.log('✅ Credentials loaded from env var successfully')
+        console.log('🔑 Service account email:', credentials.client_email)
+      } else {
+        // Fallback to file (for local development)
+        const credentialsPath = join(__dirname, '..', 'storage', 'google-service-account.json')
+        console.log('📁 Looking for credentials at:', credentialsPath)
+        console.log('📁 File exists?', existsSync(credentialsPath))
+        console.log('📁 __dirname is:', __dirname)
+        
+        const credentialsFile = readFileSync(credentialsPath, 'utf8')
+        credentials = JSON.parse(credentialsFile)
+        console.log('✅ Credentials loaded from file successfully')
+        console.log('🔑 Service account email:', credentials.client_email)
+      }
     } catch (error) {
-      console.error('❌ Error reading credentials file:', error)
-      console.error('❌ Credentials path attempted:', join(__dirname, '..', 'storage', 'google-service-account.json'))
-      console.error('❌ File exists check:', existsSync(join(__dirname, '..', 'storage', 'google-service-account.json')))
+      console.error('❌ Error loading credentials:', error)
+      console.error('❌ Tried env var GOOGLE_SERVICE_ACCOUNT_JSON:', !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON)
+      console.error('❌ Tried file path:', join(__dirname, '..', 'storage', 'google-service-account.json'))
       return false
     }
 
