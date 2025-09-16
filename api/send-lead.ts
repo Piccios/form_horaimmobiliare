@@ -86,23 +86,23 @@ function normalizePayload(input: Record<string, unknown>, req: ApiRequest) {
 
 async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boolean> {
   try {
-    console.log('🔍 Starting Google Sheets append process...')
-    console.log('📊 Data to append:', JSON.stringify(data, null, 2))
+    console.log(' Starting Google Sheets append process...')
+    console.log(' Data to append:', JSON.stringify(data, null, 2))
     
     // Read credentials from environment variable only (no filesystem access in serverless)
     let credentials
     try {
       const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
       if (!credentialsJson) {
-        console.error('❌ GOOGLE_SERVICE_ACCOUNT_JSON env var is missing')
+        console.error(' GOOGLE_SERVICE_ACCOUNT_JSON env var is missing')
         return false
       }
-      console.log('🔑 Loading credentials from environment variable')
+      console.log(' Loading credentials from environment variable')
       credentials = JSON.parse(credentialsJson)
-      console.log('✅ Credentials loaded from env var successfully')
-      console.log('🔑 Service account email:', credentials.client_email)
+      console.log(' Credentials loaded from env var successfully')
+      console.log(' Service account email:', credentials.client_email)
     } catch (error) {
-      console.error('❌ Error parsing GOOGLE_SERVICE_ACCOUNT_JSON:', error)
+      console.error(' Error parsing GOOGLE_SERVICE_ACCOUNT_JSON:', error)
       return false
     }
 
@@ -110,14 +110,14 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
       credentials: credentials,
       scopes: ['https://www.googleapis.com/auth/spreadsheets']
     })
-    console.log('🔐 Google Auth initialized')
+    console.log(' Google Auth initialized')
 
     const sheets = google.sheets({ version: 'v4', auth })
-    console.log('📋 Google Sheets API initialized')
+    console.log(' Google Sheets API initialized')
     
     // Get Google Sheet ID from environment
     const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID
-    console.log('🆔 Google Sheet ID from env:', SPREADSHEET_ID)
+    console.log(' Google Sheet ID from env:', SPREADSHEET_ID)
     if (!SPREADSHEET_ID) {
       console.error(' GOOGLE_SHEET_ID environment variable not set')
       return false
@@ -126,7 +126,7 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
     // Resolve target sheet title: prefer env, else detect first sheet
     let targetSheetTitle = process.env.GOOGLE_SHEET_TITLE || 'Sheet1'
     if (process.env.GOOGLE_SHEET_TITLE) {
-      console.log('📄 Using sheet title from env:', targetSheetTitle)
+      console.log(' Using sheet title from env:', targetSheetTitle)
     } else {
       try {
         const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID })
@@ -135,9 +135,9 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
         if (title && typeof title === 'string') {
           targetSheetTitle = title
         }
-        console.log('📄 Detected target sheet title:', targetSheetTitle)
+        console.log(' Detected target sheet title:', targetSheetTitle)
       } catch {
-        console.warn('⚠️ Unable to fetch sheet metadata, defaulting to Sheet1')
+        console.warn(' Unable to fetch sheet metadata, defaulting to Sheet1')
       }
     }
 
@@ -162,12 +162,12 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
       '' // NOTE EUROANSA (non presente nel form)
     ]
 
-    console.log('📝 Values prepared for Google Sheet:', JSON.stringify(values, null, 2))
+    console.log(' Values prepared for Google Sheet:', JSON.stringify(values, null, 2))
     // Quote sheet title to support spaces/apostrophes per A1 notation
     const escapedTitle = String(targetSheetTitle).replace(/'/g, "''")
     const targetRange = `'${escapedTitle}'!A:P`
-    console.log('🎯 Target range:', targetRange)
-    console.log('📊 Spreadsheet ID:', SPREADSHEET_ID)
+    console.log(' Target range:', targetRange)
+    console.log(' Spreadsheet ID:', SPREADSHEET_ID)
 
     const appendResult = await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
@@ -178,15 +178,15 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
       }
     })
 
-    console.log('✅ Row added to Google Sheet successfully')
-    console.log('📈 Append result:', JSON.stringify(appendResult.data, null, 2))
+    console.log(' Row added to Google Sheet successfully')
+    console.log(' Append result:', JSON.stringify(appendResult.data, null, 2))
     return true
   } catch (error) {
-    console.error('❌ Error adding row to Google Sheet:', error)
-    console.error('❌ Error details:', JSON.stringify(error, null, 2))
+    console.error(' Error adding row to Google Sheet:', error)
+    console.error(' Error details:', JSON.stringify(error, null, 2))
     if (error instanceof Error) {
-      console.error('❌ Error message:', error.message)
-      console.error('❌ Error stack:', error.stack)
+      console.error(' Error message:', error.message)
+      console.error(' Error stack:', error.stack)
     }
     return false
   }
@@ -236,10 +236,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     console.log('🚀 Starting Google Sheets append process...')
     const sheetSuccess = await appendToGoogleSheet(normalized)
     if (!sheetSuccess) {
-      console.error('❌ Failed to append to Google Sheet - but continuing with success response')
+      console.error(' Failed to append to Google Sheet - but continuing with success response')
       // Still return success to user, but log the error
     } else {
-      console.log('✅ Google Sheets append completed successfully')
+      console.log(' Google Sheets append completed successfully')
     }
 
     return res.status(200).json({ ok: true })
