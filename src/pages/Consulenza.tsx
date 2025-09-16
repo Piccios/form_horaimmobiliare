@@ -34,7 +34,7 @@ export default function Consulenza() {
     }
 
     const telefono = String(data.get('cellulare_cliente') || '')
-    if (telefono && !isPhoneValid(telefono)) nextErrors['telefono'] = 'Telefono non valido'
+    if (telefono && !isPhoneValid(telefono)) nextErrors['cellulare_cliente'] = 'Telefono non valido'
 
     const importoMutuo = Number(data.get('importo_mutuo') || 0)
     if (!isPositiveNumber(importoMutuo) || importoMutuo < 10000) nextErrors['importo_mutuo'] = 'Importo non valido'
@@ -80,26 +80,26 @@ export default function Consulenza() {
         <form ref={formRef} onSubmit={handleSubmit} className="mt-8 grid gap-6" aria-live="polite">
           <input type="text" name="website" className="hidden" tabIndex={-1} aria-hidden="true" />
 
-          <fieldset className="grid gap-4">
+          <fieldset className="grid gap-4" disabled={loading}>
             <legend className="text-lg font-medium">Richiesta</legend>
             <Field id="email_cliente" label="Mail ( cliente Hora Immobiliare )" required error={errors['email_cliente']}>
-              <input id="email_cliente" name="email_cliente" type="email" required className="w-full border rounded-md px-3 py-2" />
+              <input id="email_cliente" name="email_cliente" type="email" required />
             </Field>
             <Field id="nome_cognome_cliente" label="Nome e Cognome ( Cliente Hora Immobiliare )" required error={errors['nome_cognome_cliente']}>
-              <input id="nome_cognome_cliente" name="nome_cognome_cliente" required className="w-full border rounded-md px-3 py-2" />
+              <input id="nome_cognome_cliente" name="nome_cognome_cliente" required />
             </Field>
             <Field id="cellulare_cliente" label="Cellulare ( Cliente Hora Immobiliare )" required error={errors['cellulare_cliente']}>
-              <input id="cellulare_cliente" name="cellulare_cliente" type="tel" required pattern="^[0-9+().\\s-]{7,}$" className="w-full border rounded-md px-3 py-2" />
+              <input id="cellulare_cliente" name="cellulare_cliente" type="tel" required pattern="^[0-9+().\\s-]{7,}$" />
             </Field>
             <Field id="importo_mutuo" label="Importo Mutuo ( Desiderato )" required error={errors['importo_mutuo']}>
-              <input id="importo_mutuo" name="importo_mutuo" type="number" min={10000} step={1000} required className="w-full border rounded-md px-3 py-2" />
+              <input id="importo_mutuo" name="importo_mutuo" type="number" min={10000} step={500} required />
             </Field>
             <Field id="valore_immobile" label="Valore Immobile Interessato">
-              <input id="valore_immobile" name="valore_immobile" type="number" step={1000} className="w-full border rounded-md px-3 py-2" />
+              <input id="valore_immobile" name="valore_immobile" type="number" step={5000} />
             </Field>
             <Field id="preferenza_contatto" label="Preferenza Contatto">
-              <select id="preferenza_contatto" name="preferenza_contatto" className="w-full border rounded-md px-3 py-2">
-                <option value="">Seleziona…</option>
+              <select id="preferenza_contatto" name="preferenza_contatto">
+                <option value="">Seleziona...</option>
                 <option>Telefono</option>
                 <option>Email</option>
                 <option>WhatsApp</option>
@@ -107,17 +107,20 @@ export default function Consulenza() {
               </select>
             </Field>
             <Field id="consulente_euroansa" label="Consulente Mutuo Euroansa">
-              <input id="consulente_euroansa" name="consulente_euroansa" className="w-full border rounded-md px-3 py-2">
-                              </input>
+              <select id="consulente_euroansa" name="consulente_euroansa">
+              <option value="">Seleziona...</option>
+              <option>Filipperi Filippo</option>
+              <option>Decoro Giuseppe</option>
+              </select>
             </Field>
             <Field id="nome_cognome_consulente_autorizzato" label="Nome e Cognome Consulente Immobiliare Autorizzato">
-              <input id="nome_cognome_consulente_autorizzato" name="nome_cognome_consulente_autorizzato" className="w-full border rounded-md px-3 py-2" />
+              <input id="nome_cognome_consulente_autorizzato" name="nome_cognome_consulente_autorizzato" />
             </Field>
             <Field id="email_consulente_autorizzato" label="Mail Consulente Immobiliare Autorizzato">
-              <input id="email_consulente_autorizzato" name="email_consulente_autorizzato" type="email" className="w-full border rounded-md px-3 py-2" />
+              <input id="email_consulente_autorizzato" name="email_consulente_autorizzato" type="email" />
             </Field>
             <Field id="note" label="Note">
-              <textarea id="note" name="note" rows={4} className="w-full border rounded-md px-3 py-2"></textarea>
+              <textarea id="note" name="note" rows={4}></textarea>
             </Field>
             <div className="flex items-center gap-2">
               <input id="marketing" name="marketing" type="checkbox" className="h-4 w-4" />
