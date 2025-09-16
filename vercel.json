@@ -1,6 +1,5 @@
 {
   "env": {
-    "GOOGLE_SHEET_ID": "1dyf5kSwS8k2CpDmWI_PkCT_T0cXvyhjljBP36CpQoWc",
-    "GOOGLE_SERVICE_ACCOUNT_JSON": "@google-service-account-json"
+    "GOOGLE_SHEET_ID": "1dyf5kSwS8k2CpDmWI_PkCT_T0cXvyhjljBP36CpQoWc"
   }
 }
