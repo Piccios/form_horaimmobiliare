@@ -123,6 +123,24 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
       return false
     }
     
+    // Resolve target sheet title: prefer env, else detect first sheet
+    let targetSheetTitle = process.env.GOOGLE_SHEET_TITLE || 'Sheet1'
+    if (process.env.GOOGLE_SHEET_TITLE) {
+      console.log('📄 Using sheet title from env:', targetSheetTitle)
+    } else {
+      try {
+        const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID })
+        const firstSheet = meta.data.sheets?.[0]
+        const title = firstSheet?.properties?.title
+        if (title && typeof title === 'string') {
+          targetSheetTitle = title
+        }
+        console.log('📄 Detected target sheet title:', targetSheetTitle)
+      } catch {
+        console.warn('⚠️ Unable to fetch sheet metadata, defaulting to Sheet1')
+      }
+    }
+
     // Map data to Google Sheet columns in the correct order
     // Data | Email cliente | Nome cliente | Telefono cliente | Importo mutuo | Valore immobile | Preferenza contatto | Consulente Euroansa | Email consulente Euroansa | Consulente esterno | NOTE | Email consulente esterno | Consenso marketing | Status | MASSIMO FINANZIABILE | NOTE EUROANSA
     const values = [
@@ -145,12 +163,13 @@ async function appendToGoogleSheet(data: Record<string, unknown>): Promise<boole
     ]
 
     console.log('📝 Values prepared for Google Sheet:', JSON.stringify(values, null, 2))
-    console.log('🎯 Target range: Sheet1!A:P')
+    const targetRange = `${targetSheetTitle}!A:P`
+    console.log('🎯 Target range:', targetRange)
     console.log('📊 Spreadsheet ID:', SPREADSHEET_ID)
 
     const appendResult = await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Sheet1!A:P', // 16 colonne (A-P)
+      range: targetRange, // 16 colonne (A-P)
       valueInputOption: 'RAW',
       requestBody: {
         values: [values]
