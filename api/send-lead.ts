@@ -17,8 +17,28 @@ interface ApiResponse {
 declare const process: { env: Record<string, string | undefined> }
 
 
+function formatDateDmy(date: Date): string {
+  try {
+    // Ensure Italian dd/mm/yyyy regardless of server locale; align to Europe/Rome
+    return new Intl.DateTimeFormat('it-IT', {
+      timeZone: 'Europe/Rome',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(date)
+  } catch {
+    // Fallback manual formatter (uses server timezone)
+    const d = date.getDate().toString().padStart(2, '0')
+    const m = (date.getMonth() + 1).toString().padStart(2, '0')
+    const y = date.getFullYear().toString()
+    return `${d}/${m}/${y}`
+  }
+}
+
 function normalizePayload(input: Record<string, unknown>, req: ApiRequest) {
-  const nowIso = new Date().toISOString()
+  const now = new Date()
+  const createdAtInput = input.created_at ? new Date(String(input.created_at)) : now
+  const createdAtDmy = formatDateDmy(createdAtInput)
   const headers = [
     'form_id',
     'created_at',
@@ -59,7 +79,7 @@ function normalizePayload(input: Record<string, unknown>, req: ApiRequest) {
 
   const normalized: Record<string, unknown> = {
     form_id: 'consulenza-mutuo',
-    created_at: input.created_at || nowIso,
+    created_at: createdAtDmy,
     source_page: input.source_page || '',
     utm_source: input.utm_source || input.utmSource || '',
     utm_medium: input.utm_medium || input.utmMedium || '',
